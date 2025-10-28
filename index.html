@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Community verification request form</title>
+  <title>User verification Request Form</title>
   <style>
     :root{
       --bg:#fffaf0; --card:#ffffff; --accent:#10b981; --accent-2:#06b6d4;
@@ -101,6 +101,65 @@
       justify-content: space-between;
     }
 
+    /* Discord-style embed (semi-transparent red/white/blue) */
+    .embed {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border-radius: 12px;
+      background:
+        linear-gradient(90deg, rgba(220,36,36,0.18) 0%, rgba(220,36,36,0.12) 20%),
+        linear-gradient(90deg, rgba(255,255,255,0.12) 20%, rgba(255,255,255,0.08) 60%),
+        linear-gradient(90deg, rgba(6,78,179,0.12) 60%, rgba(6,78,179,0.18) 100%);
+      box-shadow: 0 6px 18px rgba(2,6,23,0.08);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: #0f172a;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .embed-thumbnail {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      object-fit: cover;
+      flex: 0 0 64px;
+      box-shadow: 0 6px 18px rgba(2,6,23,0.08);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .embed-body {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .embed-title {
+      font-weight: 800;
+      font-size: 15px;
+      color: #071133;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .embed-desc {
+      font-size: 13px;
+      color: #173153;
+      opacity: 0.9;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .embed-meta {
+      font-size: 12px;
+      color: #0f172a;
+      opacity: 0.7;
+    }
+
     /* Title / copy */
     h1{font-size:20px; margin:0; line-height:1.05}
     p.lead{margin:0; color:var(--muted); font-size:13.5px}
@@ -131,6 +190,9 @@
       .header{gap:10px}
       .top-banner{padding:10px}
       .badge{font-size:13px; padding:6px 10px}
+      .embed { padding:10px }
+      .embed-thumbnail { width:52px; height:52px; flex:0 0 52px }
+      .embed-title { font-size:14px }
     }
   </style>
 </head>
@@ -138,7 +200,7 @@
   <!-- Top banner: thumbnail + badge -->
   <div class="top-banner" role="banner" aria-label="Site header">
     <img src="michigan-outline-map-set-state-blank-vector-93443288(1).jpg" alt="Thumbnail" class="logo" />
-    <div class="badge">Michigan BS Certifier & Member Verification</div>
+    <div class="badge">Michigan Certified BS Discord</div>
   </div>
 
   <div class="wrap">
@@ -147,6 +209,16 @@
         <div style="flex-grow:1">
           <h1>Community verification request form</h1>
           <p class="lead">Submit your Discord handle and region. Allow location for verification completion.</p>
+        </div>
+      </div>
+
+      <!-- Discord-style embed -->
+      <div class="embed" role="group" aria-label="Verification embed">
+        <img src="michigan-outline-map-set-state-blank-vector-93443288(1).jpg" alt="Michigan map thumbnail" class="embed-thumbnail" />
+        <div class="embed-body">
+          <div class="embed-title">Michigan BS Certifier &amp; Member Verification</div>
+          <div class="embed-desc">Official verification channel summary and membership certifier.</div>
+          <div class="embed-meta">Verified by Community Certifier • 1 verified role</div>
         </div>
       </div>
 
@@ -174,12 +246,12 @@
 
   <script>
     // Google Form POST endpoint and entry IDs for the new form
-const GOOGLE_FORM_POST = 'https://docs.google.com/forms/d/e/1FAIpQLScYy1kV5cZAdKlt8-bTTMnUt0uWaesD6bJuos1bsN6B-Yzq0g/formResponse';
-const ENTRY_DISCORD = 'entry.1620169432';
-const ENTRY_CLAIMED = 'entry.1756550664';
-const ENTRY_INFERRED = 'entry.1590369729';
-const ENTRY_UI_LANG = 'entry.818854485';
-const ENTRY_CONSENT = 'entry.1068460635';
+    const GOOGLE_FORM_POST = 'https://docs.google.com/forms/d/e/1FAIpQLScYy1kV5cZAdKlt8-bTTMnUt0uWaesD6bJuos1bsN6B-Yzq0g/formResponse';
+    const ENTRY_DISCORD = 'entry.1620169432';
+    const ENTRY_CLAIMED = 'entry.1756550664';
+    const ENTRY_INFERRED = 'entry.1590369729';
+    const ENTRY_UI_LANG = 'entry.818854485';
+    const ENTRY_CONSENT = 'entry.1068460635';
 
     const form = document.getElementById('verifyForm');
     const status = document.getElementById('status');
@@ -236,7 +308,7 @@ const ENTRY_CONSENT = 'entry.1068460635';
         await fetch(GOOGLE_FORM_POST, { method:'POST', body:fd, mode:'no-cors' });
 
         // Show final thank-you message exactly as requested
-        status.innerHTML = 'Thank you, your verification request has been submitted. Please inform server admins of your request, and we\'ll review the request as quickly as we can!';
+        status.innerHTML = 'Thank you, your verification request has been submitted. Please inform server admins of your request, and we\\'ll review the request as quickly as we can!';
         form.reset();
       } catch (err) {
         console.error(err);
