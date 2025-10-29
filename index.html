@@ -264,7 +264,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // Google Form POST endpoint and entry IDs for this form
+  // CONFIG: Google Form POST endpoint and entry IDs
   const GOOGLE_FORM_POST = 'https://docs.google.com/forms/d/e/1FAIpQLSfPa9qJcG3kldxzrE6y9FQe1gyVC7jizeWlZ-NzmZRTwVgJkA/formResponse';
   const ENTRY_DISCORD = 'entry.1570547810';
   const ENTRY_CLAIMED = 'entry.1364760989';
@@ -276,21 +276,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const status = document.getElementById('status');
   const submitBtn = document.getElementById('submitBtn');
 
+  // Defensive check: ensure DOM elements exist
   if (!form || !status || !submitBtn) {
-    console.error('Missing required DOM elements:', { form: !!form, status: !!status, submitBtn: !!submitBtn });
+    console.error('DOM elements missing', { form: !!form, status: !!status, submitBtn: !!submitBtn });
+    if (status) status.textContent = 'Internal error: missing form elements. Check console.';
     return;
   }
 
+  // Small helper to safely read inputs
+  function inputVal(id) {
+    const el = document.getElementById(id);
+    return el && el.value ? el.value.trim() : '';
+  }
+
+  // Reverse geocode (keeps existing behavior)
   async function reverseGeocode(lat, lon) {
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&zoom=5&addressdetails=1`;
       const r = await fetch(url, { headers: {'User-Agent': 'discord-verification/1.0 (contact@example.com)'}});
-      if (!r.ok) throw new Error('reverse geocode failed');
+      if (!r.ok) throw new Error('reverse geocode failed: ' + r.status);
       const j = await r.json();
       const addr = j.address || {};
       return addr.state || addr.county || addr.region || addr.country || 'unknown';
     } catch (err) {
-      console.warn('reverseGeocode failed:', err);
+      console.warn('reverseGeocode error:', err);
       return 'unknown';
     }
   }
@@ -310,55 +319,74 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Hidden form + iframe submit helper (more reliable for Google Forms than fetch no-cors)
+  // Hidden form + iframe submit helper
   function submitToGoogleForm(payload) {
-    const targetUrl = GOOGLE_FORM_POST;
-    const formEl = document.createElement('form');
-    formEl.method = 'POST';
-    formEl.action = targetUrl;
-    formEl.target = 'hidden_iframe';
-    formEl.style.display = 'none';
+    try {
+      const targetUrl = GOOGLE_FORM_POST;
+      const formEl = document.createElement('form');
+      formEl.method = 'POST';
+      formEl.action = targetUrl;
+      formEl.target = 'hidden_iframe';
+      formEl.style.display = 'none';
 
-    for (const key in payload) {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = key;
-      input.value = payload[key];
-      formEl.appendChild(input);
+      for (const key in payload) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = payload[key];
+        formEl.appendChild(input);
+      }
+
+      document.body.appendChild(formEl);
+
+      let iframe = document.getElementById('hidden_iframe');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.name = 'hidden_iframe';
+        iframe.id = 'hidden_iframe';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+      }
+
+      formEl.submit();
+      document.body.removeChild(formEl);
+      console.log('submitToGoogleForm: form submitted to', targetUrl);
+    } catch (err) {
+      console.error('submitToGoogleForm failed', err);
     }
-
-    document.body.appendChild(formEl);
-
-    let iframe = document.getElementById('hidden_iframe');
-    if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.name = 'hidden_iframe';
-      iframe.id = 'hidden_iframe';
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
-    }
-
-    formEl.submit();
-    document.body.removeChild(formEl);
   }
 
+  // Main submit handler with step-by-step logging
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    status.textContent = 'Collecting data…';
-    submitBtn.disabled = true;
-
-    const discord = (document.getElementById('discord') || {}).value?.trim() || '';
-    const claimed = (document.getElementById('claimed') || {}).value?.trim() || '';
-    if (!discord || !claimed) {
-      status.textContent = 'Please fill both fields.';
-      submitBtn.disabled = false;
-      return;
-    }
-
-    const ui_language = navigator.language || navigator.userLanguage || '';
     try {
+      console.log('submit handler start');
+      status.textContent = 'Collecting data…';
+      submitBtn.disabled = true;
+
+      const discord = inputVal('discord');
+      const claimed = inputVal('claimed');
+      console.log('form values', { discord, claimed });
+
+      if (!discord || !claimed) {
+        status.textContent = 'Please fill both fields.';
+        submitBtn.disabled = false;
+        console.warn('Validation failed: missing values');
+        return;
+      }
+
+      const ui_language = navigator.language || navigator.userLanguage || '';
+      console.log('ui_language', ui_language);
+
+      // QUICK TEST: comment the next two lines to bypass geolocation if you want to test immediately
       const geo = await getGeolocation();
+      console.log('geolocation result', geo);
+
+      // If you want to bypass geolocation for debugging, uncomment this line:
+      // const geo = { consent: 'debug-bypassed', region: 'DEBUG_REGION' };
+
       const inferred_region = geo.region || (geo.consent === 'denied' ? 'geolocation-denied' : 'unknown');
+      console.log('inferred_region', inferred_region);
 
       const payload = {};
       payload[ENTRY_DISCORD] = discord;
@@ -367,18 +395,21 @@ document.addEventListener('DOMContentLoaded', () => {
       payload[ENTRY_UI_LANG] = ui_language;
       payload[ENTRY_CONSENT] = geo.consent;
 
-      // Submit via hidden form (avoids fetch no-cors issues)
+      console.log('Prepared payload', payload);
+
+      // Submit
       submitToGoogleForm(payload);
 
-      // Show final thank-you message and reset UI
+      // Immediately update UI (hidden-form submit gives no async confirmation)
       status.innerHTML = "Thank you, your verification request has been submitted. Please inform server admins of your request, and we'll review the request as quickly as we can!";
       form.reset();
+      console.log('UI updated: thank you shown');
 
-      // Prevent accidental double-submits: keep disabled briefly
+      // Keep disabled briefly to avoid double submits
       setTimeout(() => { submitBtn.disabled = false; }, 2000);
     } catch (err) {
-      console.error(err);
-      status.textContent = 'Submission failed. Try again.';
+      console.error('submit handler exception', err);
+      status.textContent = 'Submission failed. Check console.';
       submitBtn.disabled = false;
     }
   });
